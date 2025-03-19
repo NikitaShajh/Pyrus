@@ -206,7 +206,7 @@ form.onChange(['Новая маршрутизация ДС', 'u_new_ds'], true)
 /*
 Скрпт для проверки лиимитов по статья расходов
 */
-form.onChange(['expense_item', 'paymentAmountRub', 'converted_amount'], true)
+form.onChange(['expense_item', 'paymentAmountRub', 'converted_amount'])
   .setValueAsync('limit_item_checkbox', async (state) => {
 
     // Год, для которого производится проверка
@@ -221,8 +221,8 @@ form.onChange(['expense_item', 'paymentAmountRub', 'converted_amount'], true)
     }
 
     try {
-      // Выполняем проверку только на первом шаге создания
-      if (state.currentStep > 0) return;
+      // Выполняем проверку только на первом и 3 шаге создания
+      if (state.currentStep != 0 && state.currentStep != 3) return;
 
       const [expenseField, paymentAmountRub, convertedAmount] = state.changes;
       if (!expenseField?.columns) return "unchecked";
@@ -369,39 +369,36 @@ form.onChange(['limit_item_checkbox', 'limit_doc_checkbox'], true)
 /*
 Скрипт для расчета курса валют для разных валют 
 */
-form.onChange(['amount_rub', 'paymentAmountUsd', 'paymentAmountEur'])
+form.onChange(['amount_rub', 'paymentAmountUsd', 'paymentAmountEur', 'paymentAmounByn', 'paymentAmountKzt', 'paymentAmountGel', 'paymentAmountAmd', 'paymentAmountAed'])
   .setValueAsync('exchange', async state => {
-    const [amount_rub, paymentAmountUsd, paymentAmountEur] = state.changes;
+    const [amount_rub, paymentAmountUsd, paymentAmountEur, paymentAmounByn, paymentAmountKzt, paymentAmountGel, paymentAmountAmd, paymentAmountAed] = state.changes;
 
-    // Получаем значения через свойство value
-    const rubValue = Number(amount_rub.value);
-
-    // Получаем значения для валют
-    const usdValue = paymentAmountUsd.value;
-    const eurValue = paymentAmountEur.value;
-    const amount_rubValue = amount_rub.value;
-
-
-
-    // Проверяем, заполнены ли поля (и не равны 0)
-    const usdFilled = usdValue && Number(usdValue) !== 0;
-    const eurFilled = eurValue && Number(eurValue) !== 0;
-
-    // Если ни одно поле валюты не заполнено, выходим без дальнейших вычислений
-    if (!amount_rubValue) {
+    // Проверяем, введена ли сумма в рублях
+    if (!amount_rub.value || Number(amount_rub.value) === 0) {
       return null;
     }
+    const rubValue = Number(amount_rub.value);
 
-    let exchange = null;
-    if (usdFilled && eurFilled) {
-      exchange = null;
-    } else if (usdFilled) {
-      exchange = rubValue / Number(usdValue);
-    } else if (eurFilled) {
-      exchange = rubValue / Number(eurValue);
+    // Массив с валютными полями
+    const currencies = [
+      { name: 'USD', value: paymentAmountUsd.value },
+      { name: 'EUR', value: paymentAmountEur.value },
+      { name: 'BYN', value: paymentAmounByn.value },
+      { name: 'KZT', value: paymentAmountKzt.value },
+      { name: 'GEL', value: paymentAmountGel.value },
+      { name: 'AMD', value: paymentAmountAmd.value },
+      { name: 'AED', value: paymentAmountAed.value }
+    ];
+
+    // Фильтруем заполненные валютные поля (значение задано и не равно 0)
+    const filledCurrencies = currencies.filter(cur => cur.value && Number(cur.value) !== 0);
+
+    // Если заполнено ровно одно валютное поле, вычисляем курс
+    if (filledCurrencies.length === 1) {
+      return rubValue / Number(filledCurrencies[0].value);
     }
-    
-    return exchange;
+
+    return null;
 });
 
 /*
